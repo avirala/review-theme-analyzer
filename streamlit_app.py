@@ -9,7 +9,7 @@ back to the free offline mining discovery instead of failing.
 import io
 import json
 import logging
-from datetime import datetime, date, timedelta
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -246,23 +246,13 @@ def main():
             )
             store = st.selectbox("Store", ["Auto-detect", "Google Play", "Apple App Store"])
         with col2:
-            country = st.text_input("Store country code", value="us")
+            count = st.number_input("Number of most-recent reviews", min_value=10,
+                                     max_value=MAX_REVIEWS, value=1000, step=10)
             allow_llm = st.checkbox(
                 "Use LLM-based theme discovery (shared quota)", value=True,
                 help="Falls back automatically to free offline discovery if today's shared "
                      "quota is used up.",
             )
-
-        mode = st.radio("Fetch by", ["Number of reviews", "Date range"], horizontal=True)
-        if mode == "Number of reviews":
-            count = st.number_input("Number of most-recent reviews", min_value=10,
-                                     max_value=MAX_REVIEWS, value=1000, step=10)
-            date_from = date_to = None
-        else:
-            count = None
-            dc1, dc2 = st.columns(2)
-            date_from = dc1.date_input("From", value=date.today() - timedelta(days=90))
-            date_to = dc2.date_input("To", value=date.today())
 
         submitted = st.form_submit_button("Analyze", type="primary")
 
@@ -280,12 +270,9 @@ def main():
             if resolved_store is None:
                 resolved_store = "apple" if app_id.strip().lstrip("id").isdigit() else "google"
 
-            dt_from = datetime.combine(date_from, datetime.min.time()) if date_from else None
-            dt_to = datetime.combine(date_to, datetime.max.time()) if date_to else None
-
             with st.spinner("Running analysis…"):
-                result = run_analysis(app_id.strip(), resolved_store, country.strip() or "us",
-                                       count, dt_from, dt_to, allow_llm)
+                result = run_analysis(app_id.strip(), resolved_store, "us",
+                                       count, None, None, allow_llm)
 
             if result:
                 st.session_state["result"] = result
