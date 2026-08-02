@@ -266,27 +266,33 @@ def main():
 
         submitted = st.form_submit_button("Analyze", type="primary")
 
-    if not submitted:
-        return
+    # Widgets inside render_results() (the theme/sub-theme filters, search box)
+    # live outside this form, so selecting them triggers a full script rerun
+    # with `submitted` back to False. Without persisting the result in
+    # session_state, that rerun would fall straight through and show the
+    # blank form again instead of the (still valid) results.
+    if submitted:
+        if not app_id.strip():
+            st.error("Enter an App Store ID first.")
+        else:
+            store_map = {"Auto-detect": None, "Google Play": "google", "Apple App Store": "apple"}
+            resolved_store = store_map[store]
+            if resolved_store is None:
+                resolved_store = "apple" if app_id.strip().lstrip("id").isdigit() else "google"
 
-    if not app_id.strip():
-        st.error("Enter an App Store ID first.")
-        return
+            dt_from = datetime.combine(date_from, datetime.min.time()) if date_from else None
+            dt_to = datetime.combine(date_to, datetime.max.time()) if date_to else None
 
-    store_map = {"Auto-detect": None, "Google Play": "google", "Apple App Store": "apple"}
-    resolved_store = store_map[store]
-    if resolved_store is None:
-        resolved_store = "apple" if app_id.strip().lstrip("id").isdigit() else "google"
+            with st.spinner("Running analysis…"):
+                result = run_analysis(app_id.strip(), resolved_store, country.strip() or "us",
+                                       count, dt_from, dt_to, allow_llm)
 
-    dt_from = datetime.combine(date_from, datetime.min.time()) if date_from else None
-    dt_to = datetime.combine(date_to, datetime.max.time()) if date_to else None
+            if result:
+                st.session_state["result"] = result
+                st.session_state["app_label"] = app_id.strip()
 
-    with st.spinner("Running analysis…"):
-        result = run_analysis(app_id.strip(), resolved_store, country.strip() or "us",
-                               count, dt_from, dt_to, allow_llm)
-
-    if result:
-        render_results(result, app_id.strip())
+    if "result" in st.session_state:
+        render_results(st.session_state["result"], st.session_state["app_label"])
 
 
 if __name__ == "__main__":
