@@ -1,0 +1,254 @@
+"""Web front-end for review_analyzer, deployable on Streamlit Community Cloud.
+
+Password-gated (st.secrets["APP_PASSWORD"]). Uses a shared Anthropic API key
+(st.secrets["ANTHROPIC_API_KEY"]) for LLM theme discovery, protected by a
+soft daily quota (st.secrets.get("DAILY_LLM_QUOTA", 15)) so a shared link
+can't run up an unbounded bill — requests past the quota automatically fall
+back to the free offline mining discovery instead of failing.
+"""
+import io
+import json
+import logging
+from datetime import datetime, date, timedelta
+from pathlib import Path
+
+import pandas as pd
+import streamlit as st
+
+from review_analyzer import classifier, report, scrapers, workbook
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s - %(message)s")
+logger = logging.getLogger("review_analyzer.web")
+
+QUOTA_FILE = Path(__file__).parent / ".llm_usage_quota.json"
+MAX_REVIEWS = 1000
+
+st.set_page_config(page_title="App Review Theme Analyzer", page_icon="📱", layout="wide")
+
+
+# ---------------------------------------------------------------- auth ----
+def check_password():
+    if st.session_state.get("authenticated"):
+        return True
+
+    st.title("📱 App Review Theme Analyzer")
+    pw = st.text_input("Access password", type="password")
+    if st.button("Enter"):
+        expected = st.secrets.get("APP_PASSWORD")
+        if expected and pw == expected:
+            st.session_state["authenticated"] = True
+            st.rerun()
+        else:
+            st.error("Incorrect password.")
+    return False
+
+
+# --------------------------------------------------------------- quota ----
+def _load_quota():
+    if not QUOTA_FILE.exists():
+        return {"date": str(date.today()), "llm_runs": 0}
+    try:
+        data = json.loads(QUOTA_FILE.read_text())
+    except (json.JSONDecodeError, OSError):
+        return {"date": str(date.today()), "llm_runs": 0}
+    if data.get("date") != str(date.today()):
+        return {"date": str(date.today()), "llm_runs": 0}
+    return data
+
+
+def _bump_quota():
+    data = _load_quota()
+    data["llm_runs"] += 1
+    QUOTA_FILE.write_text(json.dumps(data))
+    return data["llm_runs"]
+
+
+def llm_quota_available():
+    limit = st.secrets.get("DAILY_LLM_QUOTA", 15)
+    return _load_quota()["llm_runs"] < limit, limit
+
+
+# ------------------------------------------------------------- pipeline ---
+def run_analysis(app_id, store, country, count, date_from, date_to, allow_llm):
+    progress = st.progress(0.0, text="Fetching reviews…")
+
+    rows = scrapers.fetch_reviews(
+        app_id, store, country=country, count=count,
+        date_from=date_from, date_to=date_to,
+    )
+    if not rows:
+        progress.empty()
+        st.error("No reviews were fetched. Check the app ID, store, and date range.")
+        return None
+
+    progress.progress(0.4, text=f"Fetched {len(rows)} reviews. Discovering themes…")
+
+    quota_ok, limit = llm_quota_available()
+    use_llm = "auto" if (allow_llm and quota_ok) else False
+    if allow_llm and not quota_ok:
+        st.warning(
+            f"Shared daily LLM quota ({limit} analyses) is used up for today — "
+            "falling back to the free offline theme discovery for this run. Try again tomorrow "
+            "for LLM-quality themes."
+        )
+
+    try:
+        theme_rules, discovery_method = classifier.discover_themes(rows, use_llm=use_llm)
+    except RuntimeError as exc:
+        st.warning(f"LLM discovery failed ({exc}); using offline discovery instead.")
+        theme_rules, discovery_method = classifier.discover_themes(rows, use_llm=False)
+
+    if discovery_method == "llm":
+        _bump_quota()
+
+    progress.progress(0.7, text="Classifying reviews…")
+    classifier.classify_reviews(rows, theme_rules)
+
+    progress.progress(0.9, text="Building outputs…")
+    xlsx_buffer = io.BytesIO()
+    n_summary_rows, n_detail_rows = workbook.build_workbook(rows, xlsx_buffer)
+    xlsx_buffer.seek(0)
+
+    progress.progress(1.0, text="Done.")
+    progress.empty()
+
+    return {
+        "rows": rows,
+        "discovery_method": discovery_method,
+        "xlsx_bytes": xlsx_buffer.getvalue(),
+        "n_summary_rows": n_summary_rows,
+    }
+
+
+# ------------------------------------------------------------------ UI ----
+def render_results(result, app_label):
+    rows = result["rows"]
+    total = len(rows)
+    overall_avg = sum(r["rating"] for r in rows) / total
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Reviews analyzed", total)
+    c2.metric("Overall avg rating", f"{overall_avg:.2f}★")
+    c3.metric("Theme discovery", result["discovery_method"])
+
+    st.subheader("Top themes")
+    top = report.top_themes(rows, num_themes=10)
+    df_top = pd.DataFrame(
+        [{"Theme": t, "Count": s["count"], "Avg Rating": round(s["avg"], 2)} for t, s in top]
+    )
+    st.dataframe(df_top, width="stretch", hide_index=True)
+
+    st.subheader("All themes & sub-themes")
+    from collections import defaultdict
+    sub_counts = defaultdict(lambda: defaultdict(lambda: [0, 0]))
+    theme_counts = defaultdict(lambda: [0, 0])
+    for r in rows:
+        acc = sub_counts[r["theme"]][r["sub_theme"]]
+        acc[0] += 1
+        acc[1] += r["rating"]
+        tc = theme_counts[r["theme"]]
+        tc[0] += 1
+        tc[1] += r["rating"]
+
+    for theme, (cnt, rsum) in sorted(theme_counts.items(), key=lambda x: -x[1][0]):
+        with st.expander(f"{theme} — n={cnt}, avg={rsum / cnt:.2f}★"):
+            subs = sorted(sub_counts[theme].items(), key=lambda x: -x[1][0])
+            df_sub = pd.DataFrame(
+                [{"Sub-theme": label, "Count": c, "Avg Rating": round(s / c, 2)}
+                 for label, (c, s) in subs]
+            )
+            st.dataframe(df_sub, width="stretch", hide_index=True)
+
+    st.subheader("Downloads")
+    slug = app_label.lower().replace(" ", "_")
+    raw_csv = _rows_to_csv(rows, categorized=False)
+    cat_csv = _rows_to_csv(rows, categorized=True)
+
+    d1, d2, d3 = st.columns(3)
+    d1.download_button("⬇ Raw reviews CSV", raw_csv, file_name=f"{slug}_reviews_raw.csv",
+                        mime="text/csv")
+    d2.download_button("⬇ Categorized CSV", cat_csv, file_name=f"{slug}_reviews_categorized.csv",
+                        mime="text/csv")
+    d3.download_button("⬇ Theme workbook (.xlsx)", result["xlsx_bytes"],
+                        file_name=f"{slug}_review_themes.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+def _rows_to_csv(rows, categorized):
+    import csv
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    if categorized:
+        w.writerow(["review text", "rating", "date", "thumbsup count", "theme", "sub_theme"])
+        for r in rows:
+            w.writerow([r["review_text"], r["rating"], r["date"], r["thumbsup_count"],
+                        r["theme"], r["sub_theme"]])
+    else:
+        w.writerow(["review text", "rating", "date", "thumbsup count"])
+        for r in rows:
+            w.writerow([r["review_text"], r["rating"], r["date"], r["thumbsup_count"]])
+    return buf.getvalue().encode("utf-8")
+
+
+def main():
+    if not check_password():
+        return
+
+    st.title("📱 App Review Theme Analyzer")
+    st.caption("Scrape Google Play / Apple App Store reviews and auto-group them into "
+               "themes and sub-themes.")
+
+    with st.form("analyze_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            app_id = st.text_input(
+                "App Store ID",
+                placeholder="com.paytm.business (Google) or 1234567890 (Apple)",
+            )
+            store = st.selectbox("Store", ["Auto-detect", "Google Play", "Apple App Store"])
+        with col2:
+            country = st.text_input("Store country code", value="us")
+            allow_llm = st.checkbox(
+                "Use LLM-based theme discovery (shared quota)", value=True,
+                help="Falls back automatically to free offline discovery if today's shared "
+                     "quota is used up.",
+            )
+
+        mode = st.radio("Fetch by", ["Number of reviews", "Date range"], horizontal=True)
+        if mode == "Number of reviews":
+            count = st.number_input("Number of most-recent reviews", min_value=10,
+                                     max_value=MAX_REVIEWS, value=1000, step=10)
+            date_from = date_to = None
+        else:
+            count = None
+            dc1, dc2 = st.columns(2)
+            date_from = dc1.date_input("From", value=date.today() - timedelta(days=90))
+            date_to = dc2.date_input("To", value=date.today())
+
+        submitted = st.form_submit_button("Analyze", type="primary")
+
+    if not submitted:
+        return
+
+    if not app_id.strip():
+        st.error("Enter an App Store ID first.")
+        return
+
+    store_map = {"Auto-detect": None, "Google Play": "google", "Apple App Store": "apple"}
+    resolved_store = store_map[store]
+    if resolved_store is None:
+        resolved_store = "apple" if app_id.strip().lstrip("id").isdigit() else "google"
+
+    dt_from = datetime.combine(date_from, datetime.min.time()) if date_from else None
+    dt_to = datetime.combine(date_to, datetime.max.time()) if date_to else None
+
+    with st.spinner("Running analysis…"):
+        result = run_analysis(app_id.strip(), resolved_store, country.strip() or "us",
+                               count, dt_from, dt_to, allow_llm)
+
+    if result:
+        render_results(result, app_id.strip())
+
+
+if __name__ == "__main__":
+    main()
