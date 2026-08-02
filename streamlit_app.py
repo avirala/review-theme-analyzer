@@ -159,6 +159,45 @@ def render_results(result, app_label):
             )
             st.dataframe(df_sub, width="stretch", hide_index=True)
 
+    st.subheader("Browse individual reviews")
+    theme_options = ["All themes"] + sorted(theme_counts.keys(), key=lambda t: -theme_counts[t][0])
+    f1, f2, f3 = st.columns([1, 1, 2])
+    selected_theme = f1.selectbox("Theme", theme_options)
+
+    if selected_theme == "All themes":
+        sub_options = ["All sub-themes"]
+    else:
+        sub_options = ["All sub-themes"] + sorted(
+            sub_counts[selected_theme].keys(),
+            key=lambda s: -sub_counts[selected_theme][s][0],
+        )
+    selected_sub = f2.selectbox("Sub-theme", sub_options)
+    search_text = f3.text_input("Search review text", placeholder="e.g. soundbox, refund…")
+
+    filtered = rows
+    if selected_theme != "All themes":
+        filtered = [r for r in filtered if r["theme"] == selected_theme]
+    if selected_sub != "All sub-themes":
+        filtered = [r for r in filtered if r["sub_theme"] == selected_sub]
+    if search_text.strip():
+        needle = search_text.strip().lower()
+        filtered = [r for r in filtered if needle in (r["review_text"] or "").lower()]
+
+    filtered_sorted = sorted(filtered, key=lambda r: r["date"] or "", reverse=True)
+    st.caption(f"Showing {len(filtered_sorted)} of {total} reviews")
+    df_reviews = pd.DataFrame([
+        {
+            "Review": r["review_text"],
+            "Rating": r["rating"],
+            "Theme": r["theme"],
+            "Sub-theme": r["sub_theme"],
+            "Date": str(r["date"]) if r["date"] else "",
+            "Thumbs up": r["thumbsup_count"],
+        }
+        for r in filtered_sorted
+    ])
+    st.dataframe(df_reviews, width="stretch", hide_index=True, height=400)
+
     st.subheader("Downloads")
     slug = app_label.lower().replace(" ", "_")
     raw_csv = _rows_to_csv(rows, categorized=False)
