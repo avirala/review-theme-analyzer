@@ -16,6 +16,7 @@ import pandas as pd
 import streamlit as st
 
 from review_analyzer import classifier, report, scrapers, workbook
+from review_analyzer.urls import parse_app_input
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s - %(message)s")
 logger = logging.getLogger("review_analyzer.web")
@@ -240,9 +241,11 @@ def main():
     with st.form("analyze_form"):
         col1, col2 = st.columns(2)
         with col1:
-            app_id = st.text_input(
-                "App Store ID",
-                placeholder="com.paytm.business (Google) or 1234567890 (Apple)",
+            app_url = st.text_input(
+                "App Store URL",
+                placeholder="https://play.google.com/store/apps/details?id=com.paytm.business",
+                help="Paste the app's Google Play or Apple App Store listing URL. "
+                     "A raw package name or numeric App Store ID also still works.",
             )
             store = st.selectbox("Store", ["Auto-detect", "Google Play", "Apple App Store"])
         with col2:
@@ -262,21 +265,25 @@ def main():
     # session_state, that rerun would fall straight through and show the
     # blank form again instead of the (still valid) results.
     if submitted:
-        if not app_id.strip():
-            st.error("Enter an App Store ID first.")
+        if not app_url.strip():
+            st.error("Enter an App Store URL (or app id) first.")
         else:
+            app_id, url_store = parse_app_input(app_url)
+
             store_map = {"Auto-detect": None, "Google Play": "google", "Apple App Store": "apple"}
             resolved_store = store_map[store]
             if resolved_store is None:
-                resolved_store = "apple" if app_id.strip().lstrip("id").isdigit() else "google"
+                resolved_store = url_store or (
+                    "apple" if app_id.lstrip("id").isdigit() else "google"
+                )
 
             with st.spinner("Running analysis…"):
-                result = run_analysis(app_id.strip(), resolved_store, "us",
+                result = run_analysis(app_id, resolved_store, "us",
                                        count, None, None, allow_llm)
 
             if result:
                 st.session_state["result"] = result
-                st.session_state["app_label"] = app_id.strip()
+                st.session_state["app_label"] = app_id
 
     if "result" in st.session_state:
         render_results(st.session_state["result"], st.session_state["app_label"])

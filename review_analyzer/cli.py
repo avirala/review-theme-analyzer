@@ -6,6 +6,7 @@ import sys
 from datetime import datetime
 
 from . import classifier, report, scrapers, workbook
+from .urls import parse_app_input
 
 logger = logging.getLogger("review_analyzer")
 
@@ -14,9 +15,11 @@ def _slugify(text):
     return re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_") or "app"
 
 
-def _detect_store(app_id, explicit_store):
+def _detect_store(app_id, url_store, explicit_store):
     if explicit_store:
         return explicit_store
+    if url_store:
+        return url_store
     return "apple" if str(app_id).lstrip("id").isdigit() else "google"
 
 
@@ -51,8 +54,9 @@ def build_parser():
                     "auto-discover themes/sub-themes, and export a summary + workbook.",
     )
     p.add_argument("--app-id", required=True,
-                    help="Google Play package name (e.g. com.paytm.business) or "
-                         "Apple App Store numeric ID (e.g. 1234567890)")
+                    help="Play Store / App Store listing URL, a Google Play package name "
+                         "(e.g. com.paytm.business), or an Apple App Store numeric ID "
+                         "(e.g. 1234567890)")
     p.add_argument("--store", choices=["google", "apple"], default=None,
                     help="Defaults to auto-detect: all-digits -> apple, else google")
     p.add_argument("--country", default="us", help="Store country code (default: us)")
@@ -101,12 +105,13 @@ def main(argv=None):
         args.count = 1000
         logger.info("Neither --count nor --from/--to given; defaulting to --count 1000")
 
-    store = _detect_store(args.app_id, args.store)
+    app_id, url_store = parse_app_input(args.app_id)
+    store = _detect_store(app_id, url_store, args.store)
     logger.info("Resolved store: %s", store)
 
     try:
         rows = scrapers.fetch_reviews(
-            args.app_id, store, country=args.country, lang=args.lang,
+            app_id, store, country=args.country, lang=args.lang,
             count=args.count, date_from=args.date_from, date_to=args.date_to,
         )
     except scrapers.ScraperError as exc:
@@ -119,8 +124,8 @@ def main(argv=None):
 
     logger.info("Fetched %d reviews total", len(rows))
 
-    app_label = _fetch_app_label(args.app_id, store, args.country)
-    slug = _slugify(app_label if app_label != args.app_id else str(args.app_id))
+    app_label = _fetch_app_label(app_id, store, args.country)
+    slug = _slugify(app_label if app_label != app_id else str(app_id))
 
     os.makedirs(args.output_dir, exist_ok=True)
     raw_csv_path = os.path.join(args.output_dir, f"{slug}_reviews_raw.csv")
