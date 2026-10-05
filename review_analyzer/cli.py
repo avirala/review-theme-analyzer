@@ -64,7 +64,7 @@ def build_parser():
 
     volume = p.add_mutually_exclusive_group()
     volume.add_argument("--count", type=int, default=None,
-                         help="Number of most-recent reviews to fetch (default 1000 if "
+                         help="Number of most-recent reviews to fetch (default 10000 if "
                               "neither --count nor --from/--to given)")
     volume.add_argument("--from", dest="date_from", type=_parse_date, default=None,
                          help="Start date YYYY-MM-DD (use with --to)")
@@ -102,8 +102,8 @@ def main(argv=None):
         logger.error("--to requires --from")
         return 2
     if args.count is None and args.date_from is None:
-        args.count = 1000
-        logger.info("Neither --count nor --from/--to given; defaulting to --count 1000")
+        args.count = 10000
+        logger.info("Neither --count nor --from/--to given; defaulting to --count 10000")
 
     app_id, url_store = parse_app_input(args.app_id)
     store = _detect_store(app_id, url_store, args.store)

@@ -22,7 +22,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(na
 logger = logging.getLogger("review_analyzer.web")
 
 QUOTA_FILE = Path(__file__).parent / ".llm_usage_quota.json"
-MAX_REVIEWS = 1000
+MAX_REVIEWS = 10000
 
 st.set_page_config(page_title="App Review Theme Analyzer", page_icon="📱", layout="wide")
 
@@ -250,7 +250,7 @@ def main():
             store = st.selectbox("Store", ["Auto-detect", "Google Play", "Apple App Store"])
         with col2:
             count = st.number_input("Number of most-recent reviews", min_value=10,
-                                     max_value=MAX_REVIEWS, value=1000, step=10)
+                                     max_value=MAX_REVIEWS, value=10000, step=100)
             allow_llm = st.checkbox(
                 "Use LLM-based theme discovery (shared quota)", value=True,
                 help="Falls back automatically to free offline discovery if today's shared "
