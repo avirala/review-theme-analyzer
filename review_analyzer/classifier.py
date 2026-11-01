@@ -83,7 +83,7 @@ FINTECH_MERCHANT_DOMAIN_THEMES = {
         ]),
         ("Device malfunction / stopped working", [
             "soundbox", "sound box", "sound pod", "soundpod", "smart speaker",
-        ]),
+        ], 3),
     ],
     "QR Code Issues": [
         ("QR image broken or not downloading", [
@@ -93,27 +93,45 @@ FINTECH_MERCHANT_DOMAIN_THEMES = {
             "physical qr", "no qr", "qr nahi mila", "qr nahi diya",
         ]),
         ("QR not linking / activating", [
-            "qr code", " qr ", "qr link", "qr activate", "qr generat", "qr scan",
+            "qr link", "qr activate", "qr generat", "qr scan",
         ]),
+        ("General QR code mention", [
+            "qr code", " qr ",
+        ], 3),
     ],
     "Settlement Cycle Issues": [
-        ("No control over settlement schedule", [
-            "settlement cycle", "settlement schedule", "instant settlement",
-            "daily settlement", "settlement option",
-        ]),
         ("Unexpected settlement fee", [
             "settlement charge", "settlement fee", "charge for settlement",
         ]),
         ("Settlement delayed / money not credited", [
-            "settlement", "sattelment", "setllement", "setelment", "not settled",
-            "settle nahi", "settle jaldi nahin", "not credited to my account",
-            "money not credited", "not satel", "not setel", "note setteled",
-            "not settle", "unable to settle", "money is stuck", "paisa fass",
-            "balance not settle", "amount not settle", "seattle my", "fase hai",
-            "fasa hai", "rs fase", "settled my balances",
+            "not settled", "settle nahi", "settle nhi", "settle jaldi nahin",
+            "not credited to my account", "money not credited", "not satel",
+            "not setel", "note setteled", "not settle", "unable to settle",
+            "money is stuck", "paisa fass", "balance not settle", "amount not settle",
+            "seattle my", "fase hai", "fasa hai", "rs fase", "settled my balances",
+            "settle problem", "settled is so late", "settled huya", "paisa nahi aya",
+            "paisa nehi aya", "can't be settled", "cant be settled",
+            "didn't got my payment settled", "didn't settle the money",
+            "they settled only",
         ]),
+        # Everything below is ambiguous/feature-descriptive on its own —
+        # "instant settlement", bare "settlement", "settled" all show up
+        # just as often in praise ("fast settlement, great app!") as in
+        # complaints, since domain theme_rules are checked before the
+        # positive/negative split. Gated to rating <=3 so positive mentions
+        # correctly fall through to General Positive Feedback instead.
+        ("No control over settlement schedule", [
+            "settlement cycle", "settlement schedule", "instant settlement",
+            "daily settlement", "settlement option",
+        ], 3),
+        ("General settlement mention", [
+            "settlement", "sattelment", "setllement", "setelment", "settled",
+        ], 3),
         ("Cannot view transaction/payment history", [
             "can not see transaction", "cannot see transaction", "transaction not show",
+            "not show transaction", "transaction does not show", "transaction does not shows",
+            "transaction show ni", "no transaction is show", "transaction is show here",
+            "not show me on dashboard", "not show me on", "transaction na dikh",
             "transaction history", "didn't showing on history", "not showing on history",
         ]),
     ],
@@ -130,7 +148,7 @@ FINTECH_MERCHANT_DOMAIN_THEMES = {
         ]),
         ("General cashback/reward mention", [
             "cashback", "cash back", "reward",
-        ]),
+        ], 3),
     ],
     "Merchant Onboarding / Registration Issues": [
         ("Shows 'not registered' despite being an existing registered merchant", [
@@ -246,7 +264,7 @@ FINTECH_MERCHANT_DOMAIN_THEMES = {
         ]),
         ("Generic customer support complaint", [
             "customer support", "customer care", "coustomer care", "costumer care",
-        ]),
+        ], 3),
         ("Merchant service/support experience complaint", [
             "service", "support",
         ], 3),
@@ -269,8 +287,14 @@ FINTECH_MERCHANT_DOMAIN_THEMES = {
         ]),
         ("Slow performance / long loading time", [
             "very slow", "extremely slow", "too slow", "slow app", "app is slow",
-            "slowly work", "lag kar raha", "app lag",
+            "slowly work", "lag kar raha", "app lag", "too laggy", "takes much time",
+            "takes time in loading", "jyada time lagta", "jyada samay lagta",
+            "jyada smay lagate", "time lagta hai khulne", "download nhi ho pa",
+            "slow open", "all time slow", "does not refresh",
         ]),
+        ("General slowness mention", [
+            "slow",
+        ], 3),
         ("Server/connectivity errors", [
             "unable to connect to server", "unable to contact", "server down",
             "service down", "not connected to internet", "connection error",
