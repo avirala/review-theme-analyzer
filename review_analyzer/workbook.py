@@ -6,12 +6,15 @@ import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill
 from openpyxl.utils import get_column_letter
 
+from .classifier import SHORT_REVIEWS
+
 FONT = "Arial"
 
 
 def _theme_order(rows):
-    """Order themes by frequency (General Positive/Negative and Other pinned
-    to sensible positions), sub-themes by frequency within each theme."""
+    """Order themes by frequency (Short Reviews pinned last regardless of
+    its raw count, since it's a catch-all by length, not a real theme),
+    sub-themes by frequency within each theme."""
     counts = defaultdict(int)
     theme_totals = defaultdict(int)
     for r in rows:
@@ -19,11 +22,9 @@ def _theme_order(rows):
         theme_totals[r["theme"]] += 1
 
     themes_sorted = sorted(theme_totals, key=lambda t: -theme_totals[t])
-    # keep "Other / Uncategorized" last regardless of raw frequency, matching
-    # the convention used throughout the manual analyses
-    if "Other / Uncategorized" in themes_sorted:
-        themes_sorted.remove("Other / Uncategorized")
-        themes_sorted.append("Other / Uncategorized")
+    if SHORT_REVIEWS in themes_sorted:
+        themes_sorted.remove(SHORT_REVIEWS)
+        themes_sorted.append(SHORT_REVIEWS)
 
     ordered_keys = []
     for theme in themes_sorted:

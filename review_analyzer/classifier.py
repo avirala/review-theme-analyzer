@@ -11,10 +11,16 @@ Two discovery backends, same output shape — an ordered dict of:
   automatically when ANTHROPIC_API_KEY is set (and the `anthropic` package is
   installed), unless explicitly disabled.
 
-Either way, classify_reviews() applies the resulting rules to every review,
-in priority order, with two universal fallbacks: General Positive/Negative
-Feedback (by rating, for reviews that hit no mined/LLM theme) and Other /
-Uncategorized (split by length/rating, for anything left over).
+Either way, classify_reviews() applies the resulting rules only to reviews
+with at least MIN_WORDS_FOR_THEME_ANALYSIS words. Shorter reviews ("good",
+"ok", a single emoji) carry too little signal to theme meaningfully, so they
+skip theme matching entirely and go straight into their own dedicated
+SHORT_REVIEWS theme — kept separate specifically so it's easy to see, at a
+glance, how many reviews were long enough to analyze vs. not.
+
+Every review with >= MIN_WORDS_FOR_THEME_ANALYSIS words is guaranteed to land
+in either a discovered theme or General Positive/Negative Feedback (by
+rating) — never in a vague leftover bucket.
 """
 import json
 import logging
@@ -26,7 +32,12 @@ logger = logging.getLogger("review_analyzer.classifier")
 
 GENERAL_POSITIVE = "General Positive Feedback"
 GENERAL_NEGATIVE = "General Negative Feedback (No Specific Issue Cited)"
-OTHER = "Other / Uncategorized"
+SHORT_REVIEWS = "Short Reviews (Under 5 Words)"
+
+# Reviews with fewer words than this skip theme/sub-theme analysis entirely
+# and go straight into the SHORT_REVIEWS theme. Reviews at or above it always
+# get a real theme — a discovered one, or General Positive/Negative Feedback.
+MIN_WORDS_FOR_THEME_ANALYSIS = 5
 
 _POSITIVE_SUBTHEMES = [
     ("Unspecified generic praise (no reason given)", list(text_utils.POSITIVE_LEXICON)),
@@ -184,12 +195,9 @@ def discover_themes(rows, use_llm="auto", api_key=None, model="claude-sonnet-4-5
     return discover_themes_by_mining(rows, max_themes=max_themes), "mining"
 
 
-def _classify_other(text, rating):
-    if len(text.strip()) <= 15:
-        return "Short/non-specific reviews (single words, emojis, misspellings)"
-    if rating >= 4:
-        return "Unclassified positive feedback (rating 4-5, no matching theme keyword)"
-    return "Unclassified negative feedback (rating 1-3, no matching theme keyword)"
+def _classify_short(rating):
+    return ("Short positive mention (rating 4-5)" if rating >= 4
+            else "Short negative/neutral mention (rating 1-3)")
 
 
 def _first_matching_subtheme(text_lower, subthemes):
@@ -202,12 +210,25 @@ def _first_matching_subtheme(text_lower, subthemes):
 
 def classify_reviews(rows, theme_rules):
     """Mutates each row in `rows`, adding "theme" and "sub_theme" keys.
-    Priority order: discovered theme_rules (as given), then General
-    Positive/Negative by rating, then Other/Uncategorized."""
+
+    Reviews with fewer than MIN_WORDS_FOR_THEME_ANALYSIS words skip theme
+    matching entirely and go straight into SHORT_REVIEWS. Everything else
+    is guaranteed a real theme: discovered theme_rules first (priority
+    order, as given), falling back to General Positive/Negative Feedback by
+    rating — never a vague leftover bucket.
+    """
     ordered_themes = list(theme_rules.items())
 
     for row in rows:
-        text_lower = (row["review_text"] or "").lower()
+        text = row["review_text"] or ""
+        text_lower = text.lower()
+        word_count = len(text.split())
+
+        if word_count < MIN_WORDS_FOR_THEME_ANALYSIS:
+            row["theme"] = SHORT_REVIEWS
+            row["sub_theme"] = _classify_short(row["rating"])
+            continue
+
         matched_theme, matched_sub = None, None
 
         for theme_name, subthemes in ordered_themes:
@@ -219,18 +240,12 @@ def classify_reviews(rows, theme_rules):
         if matched_theme is None:
             if row["rating"] >= 4:
                 sub = _first_matching_subtheme(text_lower, _POSITIVE_SUBTHEMES)
-                if sub or any(w in text_lower for w in text_utils.POSITIVE_LEXICON):
-                    matched_theme = GENERAL_POSITIVE
-                    matched_sub = sub or "Unspecified generic praise (no reason given)"
+                matched_theme = GENERAL_POSITIVE
+                matched_sub = sub or "Unspecified generic praise (no reason given)"
             else:
                 sub = _first_matching_subtheme(text_lower, _NEGATIVE_SUBTHEMES)
-                if sub or any(w in text_lower for w in text_utils.NEGATIVE_LEXICON):
-                    matched_theme = GENERAL_NEGATIVE
-                    matched_sub = sub or "Blanket dissatisfaction statement, no reason given"
-
-        if matched_theme is None:
-            matched_theme = OTHER
-            matched_sub = _classify_other(row["review_text"], row["rating"])
+                matched_theme = GENERAL_NEGATIVE
+                matched_sub = sub or "Blanket dissatisfaction statement, no reason given"
 
         row["theme"] = matched_theme
         row["sub_theme"] = matched_sub
