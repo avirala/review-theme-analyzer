@@ -48,12 +48,12 @@ _NEGATIVE_SUBTHEMES = [
 
 # Domain supplement for Indian fintech / merchant-payment apps (Paytm,
 # PhonePe, GPay, Airtel, BharatPe-style) — the recurring domain this tool has
-# actually been used for. These four patterns show up across essentially
-# every app in that category but are specific enough (soundbox hardware,
-# UPI QR codes, bank settlement cycles, merchant KYC/onboarding) that
-# generic n-gram mining reliably misses or fragments them, unlike more
-# universal complaints (crashes, login, support) which mining already
-# handles reasonably well on its own after the negation fix.
+# actually been used for. These patterns show up across essentially every
+# app in that category but are specific enough (soundbox hardware, UPI QR
+# codes, bank settlement cycles, merchant KYC/onboarding, cashback/rewards
+# schemes) that generic n-gram mining reliably misses or fragments them,
+# unlike more universal complaints (crashes, login, support) which mining
+# already handles reasonably well on its own after the negation fix.
 #
 # Only used by the offline mining path — LLM-based discovery already finds
 # these on its own when a key is available, and layering a fixed vocabulary
@@ -101,18 +101,42 @@ FINTECH_MERCHANT_DOMAIN_THEMES = {
         ]),
         ("Settlement delayed / money not credited", [
             "settlement", "sattelment", "setllement", "not settled", "settle nahi",
-            "not credited to my account", "money not credited",
+            "not credited to my account", "money not credited", "not satel", "not setel",
+            "note setteled", "not settle", "unable to settle", "money is stuck",
+            "balance not settle", "amount not settle",
+        ]),
+    ],
+    "Cashback / Rewards Issues": [
+        ("Promised cashback or reward never credited", [
+            "cashback was not", "cashback not", "do not cashback", "no cashback",
+            "cashback nahi", "delay in crediting cashback", "not given any reward",
+            "not given reward", "reward not", "fake app not given reward",
+            "cash back was not", "cash back not", "do not cash back", "no cash back",
+        ]),
+        ("No cashback/reward offers available", [
+            "cashback offer nahi", "koy bhi cashback", "no cashback offer",
+            "cash back offer nahi", "no cash back offer",
+        ]),
+        ("General cashback/reward mention", [
+            "cashback", "cash back", "reward",
         ]),
     ],
     "Merchant Onboarding / Registration Issues": [
+        ("Shows 'not registered' despite being an existing registered merchant", [
+            "already register", "already registered", "not register for airtel",
+            "your not register", "your are not registered", "not registered with airtel",
+        ]),
         ("No sign-up option for new merchants", [
             "sign up option", "signup option", "sine up option", "no sign up",
             "register as a new user", "cant signup", "can't signup",
-            "new merchant register", "new marchent register",
+            "new merchant register", "new marchent register", "unable to signup",
         ]),
         ("Agent never visits for onboarding/verification", [
             "agent not visit", "agent not come", "agent not coming",
             "agent never visit", "no agent came", "verification pending",
+        ]),
+        ("Agent/executive opened account without proper consent", [
+            "without my consent", "opened this account without", "without downloa",
         ]),
         ("KYC stuck or repeatedly rejected", [
             "kyc not", "kyc stuck", "kyc rejected", "kyc pending", "re-kyc", "rekyc",
