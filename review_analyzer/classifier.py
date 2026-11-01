@@ -76,6 +76,11 @@ FINTECH_MERCHANT_DOMAIN_THEMES = {
             "deactivate soundbox", "deactivate sound box", "return the device",
             "return soundbox", "device return",
         ]),
+        ("Soundbox voice alert / notification not working", [
+            "soundbox notification", "sound box notification", "soundbox alert",
+            "sound box alert", "speaker notification", "payment speaker",
+            "notification alert in soundbox",
+        ]),
         ("Device malfunction / stopped working", [
             "soundbox", "sound box", "sound pod", "soundpod", "smart speaker",
         ]),
@@ -179,6 +184,58 @@ FINTECH_MERCHANT_DOMAIN_THEMES = {
     "Fraud / Trust Allegations": [
         ("Bare fraud/scam accusation", [
             "fraud", "froad", "furad", "fake app", "cheating customers", "cheated by",
+        ]),
+    ],
+    # App-level notification problems NOT tied to the soundbox hardware —
+    # the soundbox-specific equivalent lives under "Soundbox / Device
+    # Billing Issues" above and is checked first, so a review mentioning
+    # both only lands here if it didn't already match that more specific
+    # context. Positioned before Customer Support Quality deliberately:
+    # that theme's broad "service"/"support" catch-all would otherwise
+    # steal a notification-specific review before this theme ever got a
+    # chance to check it.
+    "App Notification Issues": [
+        ("No notification received when payment is made", [
+            "no notification", "not getting notification", "notification nahi",
+            "notification nahi aa", "never get any notification", "doesn't notify",
+            "not notify", "no screen notification",
+        ]),
+        ("Voice/audio notification not working", [
+            "voice notification", "voice alert", "voice recognition for accepting",
+            "sound notification",
+        ], 3),
+        ("Notification delayed / arrives late", [
+            "notification are taking", "notification doesnt arrive during the day",
+            "late notification", "notification comes very late", "notification taking an hour",
+        ]),
+        ("Too many notifications / cannot disable", [
+            "notification won't go away", "block notification", "notification settings won't",
+        ]),
+        ("Generic push/app notification complaint", [
+            "notification",
+        ], 3),
+    ],
+    # Entirely narrow/specific phrasings (no generic bare-word catch-all of
+    # its own), positioned right after App Notification Issues so that
+    # theme's rating-gated "voice notification"/"voice alert" subtheme gets
+    # first refusal on rating <=3 reviews — meaning getting here with those
+    # same words implies rating >=4, i.e. a suggestion, not a bug report.
+    # Also positioned before Customer Support Quality's broad catch-all for
+    # the same reason as App Notification Issues above.
+    "Feature Requests & Suggestions": [
+        ("Platform/OS support request (iOS/Apple)", [
+            "on ios", "for ios", "apple app store", "appstore in iphone",
+            "app for apple", "bring this apk on appstore",
+        ]),
+        ("Language support request", [
+            "add hindi language", "hindi voice", "provide hindi", "bengali voice",
+            "add bengali",
+        ]),
+        ("New feature/option request", [
+            "reset mpin", "notification box", "notification inbox", "qr sticker",
+            "add secondary number", "add number for notification", "add agents",
+            "multi agent", "new settings voice notification",
+            "voice notification", "voice alert",
         ]),
     ],
     "Customer Support Quality": [
