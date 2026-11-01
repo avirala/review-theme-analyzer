@@ -289,7 +289,19 @@ def discover_themes(rows, use_llm="auto", api_key=None, model="claude-sonnet-4-5
 
     if api_key:
         try:
-            return discover_themes_by_llm(rows, api_key=api_key, model=model), "llm"
+            llm_themes = discover_themes_by_llm(rows, api_key=api_key, model=model)
+            # LLM themes are checked first in classify_reviews (richer,
+            # context-aware, picked up its own naming for these same
+            # patterns), with the fintech domain rules appended as a safety
+            # net for anything the LLM's one-time ~180-review sample didn't
+            # generate keywords specific enough to catch across the full
+            # review set. setdefault() never overwrites an LLM theme —
+            # exact name collisions are effectively impossible since the LLM
+            # invents its own phrasing.
+            combined = dict(llm_themes)
+            for name, subs in FINTECH_MERCHANT_DOMAIN_THEMES.items():
+                combined.setdefault(name, subs)
+            return combined, "llm"
         except Exception as exc:  # noqa: BLE001 — any LLM failure falls back
             if use_llm is True:
                 raise
