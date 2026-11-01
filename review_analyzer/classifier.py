@@ -100,9 +100,10 @@ FINTECH_MERCHANT_DOMAIN_THEMES = {
             "settlement charge", "settlement fee", "charge for settlement",
         ]),
         ("Settlement delayed / money not credited", [
-            "settlement", "sattelment", "setllement", "not settled", "settle nahi",
-            "not credited to my account", "money not credited", "not satel", "not setel",
-            "note setteled", "not settle", "unable to settle", "money is stuck",
+            "settlement", "sattelment", "setllement", "setelment", "not settled",
+            "settle nahi", "settle jaldi nahin", "not credited to my account",
+            "money not credited", "not satel", "not setel", "note setteled",
+            "not settle", "unable to settle", "money is stuck", "paisa fass",
             "balance not settle", "amount not settle",
         ]),
     ],
@@ -124,7 +125,8 @@ FINTECH_MERCHANT_DOMAIN_THEMES = {
     "Merchant Onboarding / Registration Issues": [
         ("Shows 'not registered' despite being an existing registered merchant", [
             "already register", "already registered", "not register for airtel",
-            "your not register", "your are not registered", "not registered with airtel",
+            "you are not registered", "you are not a registered", "not registered with airtel",
+            "not a registered",
         ]),
         ("No sign-up option for new merchants", [
             "sign up option", "signup option", "sine up option", "no sign up",
@@ -177,6 +179,21 @@ FINTECH_MERCHANT_DOMAIN_THEMES = {
         ("Account blocked without clear reason", [
             "account got blocked", "account blocked", "account is blocked",
             "account block", "has been blocked", "my account has been blocked",
+        ]),
+    ],
+    "App Crashes, Slow Performance & Not Opening": [
+        ("App won't open / launch failure", [
+            "doesn't open", "does not open", "not open the app", "cannot open",
+            "can't open", "could not open", "unable to open", "open nahi",
+            "open nehi", "khul nahi", "khul hi nahi", "app khul", "not opening",
+            "white screen", "not at all opening",
+        ]),
+        ("Crashes / freezes mid-use", [
+            "crash", "crashing", "crashed", "freezes", "frozen", "app hangs", "hang ho",
+        ]),
+        ("Slow performance / long loading time", [
+            "very slow", "extremely slow", "too slow", "slow app", "app is slow",
+            "slowly work", "lag kar raha", "app lag",
         ]),
     ],
 }
