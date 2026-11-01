@@ -46,6 +46,80 @@ _NEGATIVE_SUBTHEMES = [
     ("Blanket dissatisfaction statement, no reason given", list(text_utils.NEGATIVE_LEXICON)),
 ]
 
+# Domain supplement for Indian fintech / merchant-payment apps (Paytm,
+# PhonePe, GPay, Airtel, BharatPe-style) — the recurring domain this tool has
+# actually been used for. These four patterns show up across essentially
+# every app in that category but are specific enough (soundbox hardware,
+# UPI QR codes, bank settlement cycles, merchant KYC/onboarding) that
+# generic n-gram mining reliably misses or fragments them, unlike more
+# universal complaints (crashes, login, support) which mining already
+# handles reasonably well on its own after the negation fix.
+#
+# Only used by the offline mining path — LLM-based discovery already finds
+# these on its own when a key is available, and layering a fixed vocabulary
+# on top of an LLM's own naming would just create duplicate/competing
+# theme names. Harmless for non-fintech apps: a rule that matches nothing
+# produces an empty theme that never appears in any output.
+FINTECH_MERCHANT_DOMAIN_THEMES = {
+    "Soundbox / Device Billing Issues": [
+        # Specific sub-patterns are checked before the generic bare-mention
+        # catch-all below — otherwise e.g. "soundbox charge" would always
+        # match "Device malfunction" first, since "soundbox" is a substring
+        # of it. _first_matching_subtheme returns on the first hit, so order
+        # here is priority order, not just a list.
+        ("'Free' device later billed / hidden rental charges", [
+            "free sound", "free speaker", "soundbox free", "sound box free",
+            "soundbox charge", "sound box charge", "speaker charge", "monthly rent",
+            "rental charge",
+        ]),
+        ("Can't deactivate or return the device", [
+            "deactivate soundbox", "deactivate sound box", "return the device",
+            "return soundbox", "device return",
+        ]),
+        ("Device malfunction / stopped working", [
+            "soundbox", "sound box", "sound pod", "soundpod", "smart speaker",
+        ]),
+    ],
+    "QR Code Issues": [
+        ("QR image broken or not downloading", [
+            "download the qr", "qr image", "qr not showing", "qr not display",
+        ]),
+        ("No physical QR code provided", [
+            "physical qr", "no qr", "qr nahi mila", "qr nahi diya",
+        ]),
+        ("QR not linking / activating", [
+            "qr code", " qr ", "qr link", "qr activate", "qr generat", "qr scan",
+        ]),
+    ],
+    "Settlement Cycle Issues": [
+        ("No control over settlement schedule", [
+            "settlement cycle", "settlement schedule", "instant settlement",
+            "daily settlement", "settlement option",
+        ]),
+        ("Unexpected settlement fee", [
+            "settlement charge", "settlement fee", "charge for settlement",
+        ]),
+        ("Settlement delayed / money not credited", [
+            "settlement", "sattelment", "setllement", "not settled", "settle nahi",
+            "not credited to my account", "money not credited",
+        ]),
+    ],
+    "Merchant Onboarding / Registration Issues": [
+        ("No sign-up option for new merchants", [
+            "sign up option", "signup option", "sine up option", "no sign up",
+            "register as a new user", "cant signup", "can't signup",
+            "new merchant register", "new marchent register",
+        ]),
+        ("Agent never visits for onboarding/verification", [
+            "agent not visit", "agent not come", "agent not coming",
+            "agent never visit", "no agent came", "verification pending",
+        ]),
+        ("KYC stuck or repeatedly rejected", [
+            "kyc not", "kyc stuck", "kyc rejected", "kyc pending", "re-kyc", "rekyc",
+        ]),
+    ],
+}
+
 
 def discover_themes_by_mining(rows, max_themes=10, min_doc_freq=None):
     """Offline fallback: mine frequent complaint/praise phrases directly out
@@ -59,12 +133,17 @@ def discover_themes_by_mining(rows, max_themes=10, min_doc_freq=None):
     neg_phrases = text_utils.mine_phrases(negative_texts, top_k=60, min_doc_freq=min_doc_freq)
     pos_phrases = text_utils.mine_phrases(positive_texts, top_k=20, min_doc_freq=min_doc_freq)
 
-    themes = {}
+    # Domain rules first (priority order = first match wins in
+    # classify_reviews), so a soundbox/QR/settlement/onboarding review
+    # lands there even if it also happens to overlap a mined phrase.
+    themes = dict(FINTECH_MERCHANT_DOMAIN_THEMES)
     themes.update(text_utils.group_phrases_into_themes(neg_phrases, max_themes=max_themes))
     themes.update(text_utils.group_phrases_into_themes(pos_phrases, max_themes=3))
 
     logger.info("Mining discovered %d candidate themes from %d negative-review phrases "
-                "and %d positive-review phrases", len(themes), len(neg_phrases), len(pos_phrases))
+                "and %d positive-review phrases (plus %d fintech-domain themes)",
+                len(themes) - len(FINTECH_MERCHANT_DOMAIN_THEMES), len(neg_phrases),
+                len(pos_phrases), len(FINTECH_MERCHANT_DOMAIN_THEMES))
     return themes
 
 
