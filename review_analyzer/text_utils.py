@@ -16,14 +16,20 @@ STOPWORDS = {
     "we", "they", "my", "your", "his", "her", "our", "their", "me", "him",
     "us", "them", "am", "do", "does", "did", "doing", "have", "has", "had",
     "having", "will", "would", "shall", "should", "can", "could", "may",
-    "might", "must", "not", "no", "so", "as", "than", "then", "there",
+    "might", "must", "so", "as", "than", "then", "there",
     "here", "when", "where", "why", "how", "what", "who", "which", "all",
     "any", "some", "just", "very", "too", "also", "even", "only", "app",
     "apps", "application", "please", "one", "also", "get", "got", "getting",
     "use", "using", "used", "yeh", "ye", "hai", "hain", "ho", "hi", "ka",
-    "ki", "ke", "ko", "se", "me", "mein", "par", "aur", "bhi", "nahi",
-    "nahin", "kar", "karo", "raha", "rahe", "rha", "rhi", "h", "hi",
+    "ki", "ke", "ko", "se", "me", "mein", "par", "aur", "bhi",
+    "kar", "karo", "raha", "rahe", "rha", "rhi", "h", "hi",
 }
+# Negation words are deliberately NOT stopwords — "not opening", "not
+# working", "no response", "nahi ho raha" are exactly the phrases complaint
+# mining needs to find. Stripping them (as an earlier version of this list
+# did) silently destroyed the single most informative word in most
+# complaint phrases, in both English and Hindi.
+NEGATION_WORDS = {"not", "no", "nahi", "nahin"}
 
 POSITIVE_LEXICON = {
     "nice", "good", "super", "best", "awesome", "badiya", "achha", "aacha",
@@ -47,7 +53,10 @@ def tokenize(text):
 
 
 def content_words(text):
-    return [w for w in tokenize(text) if w not in STOPWORDS and len(w) > 2]
+    return [
+        w for w in tokenize(text)
+        if w in NEGATION_WORDS or (w not in STOPWORDS and len(w) > 2)
+    ]
 
 
 def is_generic_sentiment_only(phrase_tokens):
