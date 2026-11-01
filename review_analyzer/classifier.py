@@ -142,6 +142,43 @@ FINTECH_MERCHANT_DOMAIN_THEMES = {
             "kyc not", "kyc stuck", "kyc rejected", "kyc pending", "re-kyc", "rekyc",
         ]),
     ],
+    "Login / OTP / Session Issues": [
+        ("Forced daily re-login / session instability", [
+            "daily login", "every day login", "login everyday", "logout daily",
+            "log out daily", "automatically logout", "auto logout", "bar bar login",
+            "bar bar otp", "roz otp", "need daily login", "login every day",
+        ]),
+        ("OTP not received / OTP failure", [
+            "otp not coming", "otp doesn't receive", "otp not received",
+            "otp is not coming", "continuous otp", "otp mangta h", "otp everytime",
+            "otp not come", "otp nahi aata", "otp not delivered",
+        ]),
+        ("Generic login failure", [
+            "unable to login", "cant login", "can't login", "not login",
+            "login nhi", "login problem", "login issue",
+        ]),
+    ],
+    "Fraud / Trust Allegations": [
+        ("Bare fraud/scam accusation", [
+            "fraud", "froad", "furad", "fake app", "cheating customers", "cheated by",
+        ]),
+    ],
+    "Customer Support Quality": [
+        ("No support / unresponsive customer care", [
+            "no customer support", "no mail support", "automatic response",
+            "no phone calls attended", "no proper customer support",
+            "no customer support available", "toll free customer support number not",
+        ]),
+        ("Generic customer support complaint", [
+            "customer support",
+        ]),
+    ],
+    "Account Blocked / Limit Issues": [
+        ("Account blocked without clear reason", [
+            "account got blocked", "account blocked", "account is blocked",
+            "account block", "has been blocked", "my account has been blocked",
+        ]),
+    ],
 }
 
 
