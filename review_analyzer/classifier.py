@@ -152,6 +152,9 @@ FINTECH_MERCHANT_DOMAIN_THEMES = {
         ("KYC stuck or repeatedly rejected", [
             "kyc not", "kyc stuck", "kyc rejected", "kyc pending", "re-kyc", "rekyc",
         ]),
+        ("General sign-up/registration mention", [
+            "signup", "sign up", "register",
+        ], 3),
     ],
     "Login / OTP / Session Issues": [
         ("Forced daily re-login / session instability", [
@@ -169,6 +172,9 @@ FINTECH_MERCHANT_DOMAIN_THEMES = {
             "unable to login", "cant login", "can't login", "not login",
             "login nhi", "login problem", "login issue",
         ]),
+        ("General login/sign-in mention", [
+            "login", "log in", "sign in", "signin",
+        ], 3),
     ],
     "Fraud / Trust Allegations": [
         ("Bare fraud/scam accusation", [
@@ -182,8 +188,11 @@ FINTECH_MERCHANT_DOMAIN_THEMES = {
             "no customer support available", "toll free customer support number not",
         ]),
         ("Generic customer support complaint", [
-            "customer support",
+            "customer support", "customer care", "coustomer care", "costumer care",
         ]),
+        ("Merchant service/support experience complaint", [
+            "service", "support",
+        ], 3),
     ],
     "Account Blocked / Limit Issues": [
         ("Account blocked without clear reason", [
@@ -393,8 +402,21 @@ def _classify_short(rating):
             else "Short negative/neutral mention (rating 1-3)")
 
 
-def _first_matching_subtheme(text_lower, subthemes):
-    for label, keywords in subthemes:
+def _first_matching_subtheme(text_lower, subthemes, rating=None):
+    """Each subtheme entry is (label, keywords) or, for broad/ambiguous
+    catch-all keywords that could plausibly appear in a positive review too
+    (bare "service", "login", "signup"), (label, keywords, max_rating) —
+    only matches when rating <= max_rating. Domain theme_rules are checked
+    before the positive/negative split, so without this gate a 5-star
+    "great service, easy login!" review would get swept into a
+    complaint-sounding theme."""
+    for entry in subthemes:
+        if len(entry) == 3:
+            label, keywords, max_rating = entry
+            if rating is not None and rating > max_rating:
+                continue
+        else:
+            label, keywords = entry
         for kw in keywords:
             if kw and kw in text_lower:
                 return label
@@ -425,7 +447,7 @@ def classify_reviews(rows, theme_rules):
         matched_theme, matched_sub = None, None
 
         for theme_name, subthemes in ordered_themes:
-            sub = _first_matching_subtheme(text_lower, subthemes)
+            sub = _first_matching_subtheme(text_lower, subthemes, rating=row["rating"])
             if sub:
                 matched_theme, matched_sub = theme_name, sub
                 break
