@@ -104,7 +104,12 @@ FINTECH_MERCHANT_DOMAIN_THEMES = {
             "settle nahi", "settle jaldi nahin", "not credited to my account",
             "money not credited", "not satel", "not setel", "note setteled",
             "not settle", "unable to settle", "money is stuck", "paisa fass",
-            "balance not settle", "amount not settle",
+            "balance not settle", "amount not settle", "seattle my", "fase hai",
+            "fasa hai", "rs fase", "settled my balances",
+        ]),
+        ("Cannot view transaction/payment history", [
+            "can not see transaction", "cannot see transaction", "transaction not show",
+            "transaction history", "didn't showing on history", "not showing on history",
         ]),
     ],
     "Cashback / Rewards Issues": [
@@ -130,8 +135,12 @@ FINTECH_MERCHANT_DOMAIN_THEMES = {
         ]),
         ("No sign-up option for new merchants", [
             "sign up option", "signup option", "sine up option", "no sign up",
-            "register as a new user", "cant signup", "can't signup",
-            "new merchant register", "new marchent register", "unable to signup",
+            "no sign-up", "sign-up option", "register as a new user", "cant signup",
+            "can't signup", "new merchant register", "new marchent register",
+            "unable to signup", "unable to sign up", "singup hi nhi",
+            "self on boarding not allowed", "self onboarding not allowed",
+            "can not registered", "cant able to create account",
+            "can't able registered", "authotoken incorrect",
         ]),
         ("Agent never visits for onboarding/verification", [
             "agent not visit", "agent not come", "agent not coming",
@@ -149,6 +158,7 @@ FINTECH_MERCHANT_DOMAIN_THEMES = {
             "daily login", "every day login", "login everyday", "logout daily",
             "log out daily", "automatically logout", "auto logout", "bar bar login",
             "bar bar otp", "roz otp", "need daily login", "login every day",
+            "sign in every time", "log in every hour", "re-sign in",
         ]),
         ("OTP not received / OTP failure", [
             "otp not coming", "otp doesn't receive", "otp not received",
@@ -194,6 +204,20 @@ FINTECH_MERCHANT_DOMAIN_THEMES = {
         ("Slow performance / long loading time", [
             "very slow", "extremely slow", "too slow", "slow app", "app is slow",
             "slowly work", "lag kar raha", "app lag",
+        ]),
+        ("Server/connectivity errors", [
+            "unable to connect to server", "unable to contact", "server down",
+            "service down", "not connected to internet", "connection error",
+        ]),
+        ("App permission loop", [
+            "asking for permission", "all permissions", "showing need permission",
+            "every single permission",
+        ]),
+    ],
+    "Recharge / Transaction Failure (Money Deducted)": [
+        ("Recharge failed but money deducted", [
+            "recharge fail", "recharge failed", "money cut", "money deduct",
+            "amount deduct", "cut money from my account", "recharge not successful",
         ]),
     ],
 }
